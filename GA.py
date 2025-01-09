@@ -148,20 +148,18 @@ class GA_variable_selector:
         Offers proportional, ranking, and *tournament selection (increased selective power in this order)
         '''
         if approach == 'proportional':
-            pass
+            self.fitness_score = self.criterion_value/np.sum(self.criterion_value)
         elif approach == "rank":
             # highest criterion value has the lowest rank (at 1)
             rank = sp.stats.rankdata(-1*np.array(self.criterion_value), method = "ordinal")
             self.fitness_score = 2*rank/(self.gen_size*(self.gen_size + 1)) # median quality candidate a selection probability of 1/P, and the best chromosome has probability 2/(P + 1)
-            # print(self.criterion_value)
-            # print(rank)
-            # print(self.fitness_score)
-            assert abs(self.fitness_score.sum() - 1) < 1e-10, "fitness scores doesn't sum to 1 for rank based"
+        
+        assert abs(self.fitness_score.sum() - 1) < 1e-10, "fitness scores doesn't sum to 1 for rank based"
 
-    def select_parent(self, method = "proportional"):
-        if method == 'tournament':
-            pass
-        elif method == "proportional":
+    def select_parent(self, method = "proportional", k = None):
+        # select two parents based on the fitness score
+        # proportional selection, ranking, and tournament selection apply increasing selective pressure
+        if method == "proportional":
             # select each parent independently with probability proportional to fitness
             selection = list(self.rng.choice(list(range(self.gen_size)), size = 2, p = self.fitness_score/self.fitness_score.sum()))
             parent = self.pop[selection]
@@ -174,6 +172,12 @@ class GA_variable_selector:
                 s2 = self.rng.choice(list(range(self.gen_size)))
             selection = [s1, s2]
             parent = self.pop[selection]
+            return parent
+        elif method == "tournament":
+            # randomly partitioned into k disjoint subsets of equal size
+            size = self.gen_size // k
+            
+
             return parent
             
     def produce_offspring(self, parent):

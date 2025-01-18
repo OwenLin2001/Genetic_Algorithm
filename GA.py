@@ -17,6 +17,7 @@ Structure:
 class GA_variable_selector:
     def __init__(self, data, target, seed = None, gen_size = None, num_generations = 100, mutation_rate:float = None, 
                  fitness_method:str = "rank", parent_method:str = "proportional", crossover_method:str = "simple",
+                 tournament:bool = False, k:int = None,
                  method = "OLS", criterion = "AIC"):
         # Data separation
         self.X = data.drop(target, axis = 1)
@@ -42,6 +43,10 @@ class GA_variable_selector:
         self.parent_method = parent_method
         self.cross_method = crossover_method
         self.num_generation = num_generations
+
+        # tournament selection
+        self.tournament = tournament
+        self.k = k
 
         # Safe the best model, criterion, and selected covariates
         self.best_model = None
@@ -79,7 +84,7 @@ class GA_variable_selector:
             # within this generation, loop over each individual
             for j in range(self.gen_size):
                 # find 2 parents based on the fitness score (default proportional to total rank fitness)
-                parent = self.select_parent()
+                parent = self.select_parent(tournament = self.tournament, k = self.k)
                 # produce a offspring given two parents
                 offspring[j] = self.produce_offspring(parent)
 
@@ -94,7 +99,7 @@ class GA_variable_selector:
 
             # Once all offspring is found, update population with the offspring
             self.pop = offspring
-            if (i == 99):
+            if (i == self.num_generation - 1):
                 print(i+1, "th generation")
                 print(self.pop)
             i += 1
@@ -156,8 +161,23 @@ class GA_variable_selector:
         
         assert abs(self.fitness_score.sum() - 1) < 1e-10, "fitness scores doesn't sum to 1 for rank based"
 
-    def select_parent(self, method = "proportional", k = None):
+    def select_parent(self, method = "proportional", tournament = False, k = None):
         # select two parents based on the fitness score
+        if tournament == True:
+            possible_parents = []
+            # randomly partitioned into k disjoint subsets of equal size
+            size = self.gen_size // k
+            while len(possible_parents) < self.gen_size:
+                # randomly split into k subsets
+                shuffled_lst = self.rng.permutation(list(range(self.gen_size)))
+                k_subsets = [shuffled_lst[i * size:(i + 1) * size].tolist() for i in range(k)]
+                # select the best individual from each subset
+                for subset in k_subsets:
+                    max_index = np.argmax(self.fitness_score[subset])
+                    possible_parents.append(subset[max_index])
+            selection = self.rng.choice(possible_parents, size = 2)
+            parent = self.pop[selection]
+            return parent
         # proportional selection, ranking, and tournament selection apply increasing selective pressure
         if method == "proportional":
             # select each parent independently with probability proportional to fitness
@@ -173,12 +193,11 @@ class GA_variable_selector:
             selection = [s1, s2]
             parent = self.pop[selection]
             return parent
-        elif method == "tournament":
-            # randomly partitioned into k disjoint subsets of equal size
-            size = self.gen_size // k
+        # elif tournament == True:
             
 
-            return parent
+        #     return
+        #     return parent
             
     def produce_offspring(self, parent):
         p1 = parent[0]

@@ -1,6 +1,5 @@
 from GA import *
 
-
 def sample_data(size = 100):
     rng  = np.random.default_rng()
     x1 = rng.choice(1000, size) # relevant
@@ -24,7 +23,8 @@ def get_data_dat(path:str) -> pd.DataFrame:
 path = "./data/baseball.dat" # 337 observation, 27 covariates + 1 target
 data = get_data_dat(path)
 
-GA = GA_variable_selector(data, target = "salary", gen_size=30, parent_method="prop_random", mutation_rate=0.02)
+GA = GA_variable_selector(data, target = "salary", gen_size=30, num_generations = 100, parent_method="prop_random", 
+                          tournament = True, k = 3, mutation_rate=0.02)
 GA.select()
 GA.show_optimal_code()
 GA.plot_gen_vs_criterion()

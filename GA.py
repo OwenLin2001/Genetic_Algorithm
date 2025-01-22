@@ -16,7 +16,7 @@ Structure:
 
 class GA_variable_selector:
     def __init__(self, data, target, seed = None, gen_size = None, num_generations = 100, mutation_rate:float = None, 
-                 fitness_method:str = "rank", parent_method:str = "proportional", crossover_method:str = "simple",
+                 fitness_method:str = "rank", parent_method:str = "proportional", generation_gap = 1, crossover_method:str = "simple",
                  tournament:bool = False, k:int = None,
                  method = "OLS", criterion = "AIC"):
         # Data separation
@@ -43,6 +43,8 @@ class GA_variable_selector:
         self.parent_method = parent_method
         self.cross_method = crossover_method
         self.num_generation = num_generations
+        self.G = generation_gap
+        assert generation_gap <= 1 and generation_gap >= 1/self.gen_size, "Generation gap is too large or too small."
 
         # tournament selection
         self.tournament = tournament
@@ -80,25 +82,40 @@ class GA_variable_selector:
             # convert the criterion to actual fitness score (default is rank)
             self.calc_fitness_score()
             # create a temporary offspring that replace pop later on
-            offspring = np.zeros_like(self.pop)
+
+            # offspring = np.zeros_like(self.pop)
+            offspring = []
             # within this generation, loop over each individual
-            for j in range(self.gen_size):
+            num_offspring = int(self.G*self.gen_size) # number of offspring to replace the population
+            for _ in range(num_offspring):
                 # find 2 parents based on the fitness score (default proportional to total rank fitness)
                 parent = self.select_parent(tournament = self.tournament, k = self.k)
                 # produce a offspring given two parents
-                offspring[j] = self.produce_offspring(parent)
+                
+                # offspring[j] = self.produce_offspring(parent)
+                offspring.append(self.produce_offspring(parent))
+            offspring = np.array(offspring)
 
             # Update the best selection on record
             if (min(self.criterion_value) < self.best_criterion):
-                print("Best selection updated.")
+                print("Best selection updated at generation ", i+1)
                 index = self.criterion_value.index(min(self.criterion_value))
                 self.best_criterion = min(self.criterion_value)
                 self.best_model = self.model[index]
                 best_cov = np.array(self.pop[index])
                 self.best_covariates = np.where(best_cov == 1)[0]
 
-            # Once all offspring is found, update population with the offspring
-            self.pop = offspring
+            # Once all offspring is found, update population with the offspring 
+            # For generation gap, deterministic version of elitist strategy is implemented
+            if self.G == 1: # canonical genetic algorithm with nonoverlapping generations
+                self.pop = offspring
+            # if self.G == 1/self.gen_size, it means a steady state genetic algorithm with higher selective pressure and more variance
+            else: # replace partial population with offspring
+                output_index = []
+                topk_index = self.get_topN_index(self.criterion_value.copy(), output_index, num_offspring)
+                self.pop[topk_index] = offspring
+            
+            # print the population after the last generation
             if (i == self.num_generation - 1):
                 print(i+1, "th generation")
                 print(self.pop)
@@ -193,11 +210,6 @@ class GA_variable_selector:
             selection = [s1, s2]
             parent = self.pop[selection]
             return parent
-        # elif tournament == True:
-            
-
-        #     return
-        #     return parent
             
     def produce_offspring(self, parent):
         p1 = parent[0]
@@ -230,6 +242,23 @@ class GA_variable_selector:
         # when mask = True, use 1-offspring, else don't change and use the original offspring
         mutated_offspring = np.where(mutation_mask, 1 - offspring, offspring)
         return mutated_offspring
+
+
+    # Helper functions
+    def get_topN_index(self, input_lst:list, output_lst:list, N:int) -> list:
+        '''
+        Get the top k index in the population recursively
+        input:
+            - input_lst: input list
+            - output_lst: output list
+            - N: number of top index to return
+        '''
+        if len(output_lst) == N:
+            return output_lst
+        output_lst.append(input_lst.index(max(input_lst)))
+        input_lst.remove(max(input_lst))
+        return self.get_topN_index(input_lst, output_lst, N)
+
 
     # Optional plot for analysis
     def plot_gen_vs_criterion(self):

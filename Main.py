@@ -24,7 +24,7 @@ path = "./data/baseball.dat" # 337 observation, 27 covariates + 1 target
 data = get_data_dat(path)
 
 GA = GA_variable_selector(data, target = "salary", gen_size=30, num_generations = 100, parent_method="prop_random", 
-                          tournament = True, k = 3, mutation_rate=0.02)
+                          generation_gap = 1/30, tournament = True, k = 3, mutation_rate=0.02)
 GA.select()
 GA.show_optimal_code()
 GA.plot_gen_vs_criterion()

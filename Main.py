@@ -16,7 +16,10 @@ def get_data_dat(path:str) -> pd.DataFrame:
     '''
     Takes in a path to a dat file, read it and save it as dataframe
     '''
-    df = pd.read_csv(path, sep=r'\s+')
+    if path[-4:] == ".dat":
+        df = pd.read_csv(path, sep=r'\s+')
+    elif path[-4:] == ".csv":
+        df = pd.read_csv(path)
     return df
 
 # data = sample_data()

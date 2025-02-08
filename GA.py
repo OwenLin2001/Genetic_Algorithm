@@ -110,9 +110,9 @@ class GA_variable_selector:
             if self.G == 1: # canonical genetic algorithm with nonoverlapping generations
                 self.pop = offspring
             # if self.G == 1/self.gen_size, it means a steady state genetic algorithm with higher selective pressure and more variance
-            else: # replace partial population with offspring
+            else: # replace partial (least fit) population with offspring
                 output_index = []
-                topk_index = self.get_topN_index(self.criterion_value.copy(), output_index, num_offspring)
+                topk_index = self.get_topN_index(self.fitness_score.copy(), output_index, num_offspring)
                 self.pop[topk_index] = offspring
             
             # print the population after the last generation
@@ -243,20 +243,20 @@ class GA_variable_selector:
         mutated_offspring = np.where(mutation_mask, 1 - offspring, offspring)
         return mutated_offspring
 
-
     # Helper functions
-    def get_topN_index(self, input_lst:list, output_lst:list, N:int) -> list:
+    def get_topN_index(self, input_lst:np.ndarray, output_lst:list, N:int) -> list:
         '''
-        Get the top k index in the population recursively
+        Get the top N least fit index in the population recursively
         input:
-            - input_lst: input list
-            - output_lst: output list
+            - input_lst: input list (criterion values)
+            - output_lst: output list (top N index)
             - N: number of top index to return
         '''
         if len(output_lst) == N:
             return output_lst
-        output_lst.append(input_lst.index(max(input_lst)))
-        input_lst.remove(max(input_lst))
+        min_index = np.argmin(input_lst)
+        output_lst.append(min_index)
+        input_lst[min_index] = np.inf
         return self.get_topN_index(input_lst, output_lst, N)
 
 

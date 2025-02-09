@@ -26,8 +26,12 @@ def get_data_dat(path:str) -> pd.DataFrame:
 path = "./data/baseball.dat" # 337 observation, 27 covariates + 1 target
 data = get_data_dat(path)
 
-GA = GA_variable_selector(data, target = "salary", gen_size=30, num_generations = 100, parent_method="prop_random", 
-                          generation_gap = 1/30, tournament = True, k = 3, mutation_rate=0.02)
+GA = GA_variable_selector(data, target = "salary", seed = None, gen_size=30, num_generations = 80, 
+                          fitness_method = "rank", parent_method="prop_random", generation_gap = 20/30, 
+                          crossover_method = "one_point", mutation_rate = 0.02, 
+                          tournament = True, k = 3,
+                          method = "GLM", criterion = "MSE", print_last_generation = False)
 GA.select()
-GA.show_optimal_code()
+GA.show_optimal()
+GA.print_best_individual()
 GA.plot_gen_vs_criterion()
